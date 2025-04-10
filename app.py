@@ -140,19 +140,31 @@ def lesson_form():
 
 @app.route('/generate-invoice', methods=['POST'])
 def generate_invoice():
-    """Generate an invoice for the student."""
+    """This is where you would handle invoice generation."""
+    # Retrieve students from the session
     students = session.get('students', [])
     
     if students:
+        # Get the most recent student from the list (assuming last added)
         student = students[-1]
         
-        # Create the customer in Square
+        # Log student info
+        print(f"Generating invoice for student: {student['first_name']} {student['last_name']}")
+        
+        # Create the customer in Square (if not already created)
         customer_id = create_square_customer(student['first_name'], student['last_name'], student['email'], student['phone'])
         
         if customer_id:
-            # Generate invoice
-            create_square_invoice(student, customer_id)
-            return render_template_string("<h2>Invoice Created Successfully for {{ student['first_name'] }} {{ student['last_name'] }}!</h2>", student=student)
+            # Create the invoice with the student data and Square customer ID
+            invoice_response = create_square_invoice(student, customer_id)
+            
+            # Log the response from Square
+            if invoice_response:
+                print(f"Invoice created successfully: {invoice_response}")
+                return render_template_string("<h2>Invoice Created Successfully for {{ student['first_name'] }} {{ student['last_name'] }}!</h2>", student=student)
+            else:
+                print("Error: Could not create invoice.")
+                return "Failed to create invoice.", 400
         
         return "Failed to create customer in Square.", 400
     
