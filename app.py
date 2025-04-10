@@ -18,6 +18,14 @@ client = Client(access_token=SQUARE_ACCESS_TOKEN)
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY  # Secret key for session management
 
+# Mapping for pricing options (from dropdown text to actual dollar value)
+price_mapping = {
+    "Appointment Block": 0.0,  # $0 for appointment block
+    "Regular Price": 40.0,      # $40 for regular price
+    "Multi-Student/Military Discount": 35.0,  # $35 for multi-student/military discount
+    "4 or More Sessions Per Week": 32.50  # $32.50 for 4 or more sessions per week
+}
+
 @app.route('/lesson-form', methods=['GET', 'POST'])
 def lesson_form():
     # Define options for the form
@@ -32,11 +40,10 @@ def lesson_form():
         "Eamon Jones", "Raymond Worden", "Joshua Miller", "Kait Widger"
     ]
     pricing_options = [
-        "Appointment Block", "Regular Price", "Multi-Student/Military Discount", "4 or More Sessions Per Week"
+        "Appointment Block ($0)", "Regular Price ($40)", "Multi-Student/Military Discount ($35)", "4 or More Sessions Per Week ($32.50)"
     ]
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"]
     times = [f"{i}:{j}" for i in range(10, 22) for j in ['00', '30']]  # Times from 10:00 AM to 9:30 PM
-    number_of_lessons = [str(i) for i in range(1, 17)]  # 1 to 16 lessons
 
     # Handle form submission (for adding a student)
     if request.method == 'POST':
@@ -49,22 +56,15 @@ def lesson_form():
             'teacher': request.form['teacher'],
             'lesson_day': request.form['lesson_day'],
             'lesson_time': request.form['lesson_time'],
-            'price': float(request.form['price']),
-            'lesson_count': int(request.form['lesson_count']),
-            'start_date': request.form['start_date'],
-            'parent_name': request.form['parent_name'],
-            'parent_contact': request.form['parent_contact'],
-            'address': request.form['address'],
-            'city': request.form['city'],
-            'state': request.form['state'],
-            'zip': request.form['zip'],
+            'price_label': request.form['price'],  # Store the price label from the dropdown
+            'price': price_mapping.get(request.form['price'], 0.0),  # Map the selected price label to the numeric price
         }
 
         # Add the student info to session
         if 'students' not in session:
             session['students'] = []
         session['students'].append(student_info)
-        return redirect(url_for('invoice_confirmation', student=student_info))
+        return redirect(url_for('lesson_form'))
 
     # Generate the form for the user
     form_html = '''
@@ -98,45 +98,10 @@ def lesson_form():
                     <option value="{{ option }}">{{ option }}</option>
                 {% endfor %}
             </select><br><br>
-            Number of Lessons: <select name="lesson_count">
-                {% for count in number_of_lessons %}
-                    <option value="{{ count }}">{{ count }}</option>
-                {% endfor %}
-            </select><br><br>
-            Recurring Invoice Start Date: <input type="date" name="start_date"><br><br>
-
-            Parent Name: <input type="text" name="parent_name"><br><br>
-            Parent Contact Info: <input type="text" name="parent_contact"><br><br>
-            Address: <input type="text" name="address"><br><br>
-            City: <input type="text" name="city"><br><br>
-            State: <input type="text" name="state"><br><br>
-            ZIP: <input type="text" name="zip"><br><br>
-
             <button type="submit">Submit</button>
         </form>
     '''
-    return render_template_string(form_html, instruments=instruments, teachers=teachers, pricing_options=pricing_options, days=days, times=times, number_of_lessons=number_of_lessons)
-
-@app.route('/invoice-confirmation', methods=['GET'])
-def invoice_confirmation():
-    student = session.get('students')[-1]
-    return render_template_string("<h2>Invoice Created Successfully for {{ student['first_name'] }} {{ student['last_name'] }}!</h2>", student=student)
-
-@app.route('/generate-invoice', methods=['POST'])
-def generate_invoice():
-    """This is where you would handle invoice generation."""
-    students = session.get('students', [])
-    
-    if students:
-        student = students[-1]
-        customer_id = create_square_customer(student['first_name'], student['last_name'], student['email'], student['phone'])
-        
-        if customer_id:
-            create_square_invoice(student, customer_id)
-            return render_template_string("<h2>Invoice Created Successfully for {{ student['first_name'] }} {{ student['last_name'] }}!</h2>", student=student)
-        
-        return "Failed to create customer in Square.", 400
-    return "No student data found.", 400
+    return render_template_string(form_html, instruments=instruments, teachers=teachers, pricing_options=pricing_options, days=days, times=times)
 
 def create_square_customer(first_name, last_name, email, phone):
     """Create a customer in Square using the data from the form."""
@@ -147,15 +112,38 @@ def create_square_customer(first_name, last_name, email, phone):
             email_address=email,
             phone_number=phone
         )
+        # Get the Customer ID from the response
         customer_id = response.result.customer.id
         print(f"Customer created successfully with ID: {customer_id}")
-        return customer_id
+        return customer_id  # Return the Customer ID
     except Exception as e:
         print(f"Error creating customer: {e}")
         return None
 
+@app.route('/generate-invoice', methods=['POST'])
+def generate_invoice():
+    """This is where you would handle invoice generation."""
+    # Retrieve students from the session
+    students = session.get('students', [])
+    
+    if students:
+        # Get the most recent student from the list (assuming last added)
+        student = students[-1]
+
+        # Create the customer in Square (if not already created)
+        customer_id = create_square_customer(student['first_name'], student['last_name'], student['email'], student['phone'])
+        
+        if customer_id:
+            # Create the invoice with the student data and Square customer ID
+            create_square_invoice(student, customer_id)
+            return render_template_string("<h2>Invoice Created Successfully for {{ student['first_name'] }} {{ student['last_name'] }}!</h2>", student=student)
+        
+        return "Failed to create customer in Square.", 400
+    return "No student data found.", 400
+
 def create_square_invoice(student, customer_id):
     """Create an invoice in Square."""
+    # Include teacher and lesson time in the description
     description = f"Lesson with {student['teacher']} at {student['lesson_time']}"
     
     invoice_data = {
@@ -163,20 +151,19 @@ def create_square_invoice(student, customer_id):
             'line_items': [
                 {
                     'name': f"{student['instrument']} Lesson",
-                    'quantity': student['lesson_count'],
+                    'quantity': '1',
                     'base_price_money': {
-                        'amount': int(student['price'] * 100),
+                        'amount': int(student['price'] * 100),  # Price in cents
                         'currency': 'USD'
                     },
-                    'description': description
+                    'description': description  # Add description with teacher and lesson time
                 }
             ],
-            'location_id': SQUARE_LOCATION_ID,
+            'location_id': SQUARE_LOCATION_ID,  # Use the location ID from .env
         },
         'primary_recipient': {
-            'customer_id': customer_id
-        },
-        'due_date': student['start_date']
+            'customer_id': customer_id  # Use the created customer ID
+        }
     }
     try:
         response = client.invoices.create_invoice(invoice_data)
