@@ -1,6 +1,8 @@
-from flask import Flask, request, render_template_string, redirect, url_for
+from flask import Flask, request, render_template_string, session, redirect, url_for
+from datetime import time
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key_here'  # Make sure to replace this with a real secret key for session security
 
 @app.route('/lesson-form', methods=['GET', 'POST'])
 def lesson_form():
@@ -28,17 +30,16 @@ def lesson_form():
     times = []
     for hour in range(10, 21):  # 10am to 8pm
         for minute in (0, 30):
-            t = datetime.time(hour, minute)
+            t = time(hour, minute)
             times.append(t.strftime("%I:%M %p"))
     times.append("09:00 PM")  # Add 9:00 PM manually
 
-    if 'students' not in request.form:
-        students = []
-    else:
-        students = eval(request.form['students'])
+    # Initialize students in session if it's the first time
+    if 'students' not in session:
+        session['students'] = []
 
+    # Handle POST request (form submission)
     if request.method == 'POST':
-        # Collect the data from the current student form
         student_data = {
             'first_name': request.form['first_name'],
             'last_name': request.form['last_name'],
@@ -61,18 +62,28 @@ def lesson_form():
             'zip': request.form.get('zip', '')
         }
 
-        # Add student data to the students list
-        students.append(student_data)
+        # Add student data to the session list
+        session['students'].append(student_data)
 
-        # Store students list back in form data for the next reload
-        return render_template_string(form_html,
-                                      students=students,
-                                      instruments=instruments,
-                                      pricing_options=pricing_options,
-                                      service_types=service_types,
-                                      days=days,
-                                      times=times)
+        # Check if the manager is done adding students or needs to add more
+        if len(session['students']) > 1:
+            return render_template_string(form_html,
+                                          students=session['students'],
+                                          instruments=instruments,
+                                          pricing_options=pricing_options,
+                                          service_types=service_types,
+                                          days=days,
+                                          times=times)
+        else:
+            return render_template_string(form_html,
+                                          students=session['students'],
+                                          instruments=instruments,
+                                          pricing_options=pricing_options,
+                                          service_types=service_types,
+                                          days=days,
+                                          times=times)
 
+    # HTML for the form
     form_html = '''
         <h2>New Student Lesson Setup</h2>
         <form method="post">
@@ -149,7 +160,7 @@ def lesson_form():
     '''
 
     return render_template_string(form_html,
-                                  students=students,
+                                  students=session['students'],
                                   instruments=instruments,
                                   pricing_options=pricing_options,
                                   service_types=service_types,
