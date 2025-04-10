@@ -42,12 +42,10 @@ def lesson_form():
     form_html = '''
         <h2>New Student Lesson Setup</h2>
         <form method="post">
-            {% if students|length > 0 %}
-                {% for student in students %}
-                    <h3>Student {{ loop.index + 1 }} Info</h3>
-                {% endfor %}
-            {% else %}
+            {% if students|length == 0 %}
                 <h3>Student 1 Info</h3>
+            {% else %}
+                <h3>Student {{ students|length + 1 }} Info</h3>
             {% endif %}
             
             <strong>Student Info</strong><br>
