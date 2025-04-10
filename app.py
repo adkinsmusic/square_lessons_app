@@ -1,26 +1,28 @@
-# Imports
 import os
 from dotenv import load_dotenv
 from square.client import Client
 from flask import Flask, request, render_template_string, session, redirect, url_for
 from datetime import time
 
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
 
-# Retrieve Square credentials from .env file
+# Retrieve the access token and location ID from environment variables
 SQUARE_ACCESS_TOKEN = os.getenv('SQUARE_ACCESS_TOKEN')
 SQUARE_LOCATION_ID = os.getenv('SQUARE_LOCATION_ID')
+FLASK_SECRET_KEY = os.getenv('FLASK_SECRET_KEY')  # Load secret key from .env file
 
-# Initialize Square Client
+# Initialize the Square client with the access token
 client = Client(access_token=SQUARE_ACCESS_TOKEN)
 
 app = Flask(__name__)
-app.secret_key = 'your_real_secret_key_here'  # Make sure to replace with a real secret key
 
-# Route to display lesson form
+# Set the Flask secret key to the value from the .env file
+app.secret_key = FLASK_SECRET_KEY  # Now using the secret key from .env file
+
 @app.route('/lesson-form', methods=['GET', 'POST'])
 def lesson_form():
+    # Define options for the form
     instruments = [
         "Piano", "Guitar", "Vocals", "Drums",
         "Banjo", "Bass Guitar", "Brass Horns/WoodWind", "Cello",
@@ -58,11 +60,42 @@ def lesson_form():
         return redirect(url_for('lesson_form'))
 
     # Generate the form for the user
-    return render_template_string('''<form method="post">
-        <!-- Your form HTML here with all input fields -->
-    </form>''', instruments=instruments, teachers=teachers, pricing_options=pricing_options, days=days, times=times)
+    form_html = '''
+        <form method="post">
+            First Name: <input type="text" name="first_name"><br>
+            Last Name: <input type="text" name="last_name"><br>
+            Email: <input type="email" name="email"><br>
+            Phone: <input type="text" name="phone"><br>
+            Instrument: <select name="instrument">
+                {% for instrument in instruments %}
+                    <option value="{{ instrument }}">{{ instrument }}</option>
+                {% endfor %}
+            </select><br>
+            Teacher: <select name="teacher">
+                {% for teacher in teachers %}
+                    <option value="{{ teacher }}">{{ teacher }}</option>
+                {% endfor %}
+            </select><br>
+            Lesson Day: <select name="lesson_day">
+                {% for day in days %}
+                    <option value="{{ day }}">{{ day }}</option>
+                {% endfor %}
+            </select><br>
+            Lesson Time: <select name="lesson_time">
+                {% for time in times %}
+                    <option value="{{ time }}">{{ time }}</option>
+                {% endfor %}
+            </select><br>
+            Price: <select name="price">
+                {% for option in pricing_options %}
+                    <option value="{{ option }}">{{ option }}</option>
+                {% endfor %}
+            </select><br>
+            <button type="submit">Submit</button>
+        </form>
+    '''
+    return render_template_string(form_html, instruments=instruments, teachers=teachers, pricing_options=pricing_options, days=days, times=times)
 
-# Create customer in Square
 def create_square_customer(first_name, last_name, email, phone):
     """Create a customer in Square using the data from the form."""
     try:
@@ -80,7 +113,6 @@ def create_square_customer(first_name, last_name, email, phone):
         print(f"Error creating customer: {e}")
         return None
 
-# Generate invoice route (add this part)
 @app.route('/generate-invoice', methods=['POST'])
 def generate_invoice():
     """This is where you would handle invoice generation."""
@@ -102,9 +134,11 @@ def generate_invoice():
         return "Failed to create customer in Square.", 400
     return "No student data found.", 400
 
-# Function to create an invoice in Square
 def create_square_invoice(student, customer_id):
     """Create an invoice in Square."""
+    # Include teacher and lesson time in the description
+    description = f"Lesson with {student['teacher']} at {student['lesson_time']}"
+    
     invoice_data = {
         'order': {
             'line_items': [
@@ -114,7 +148,8 @@ def create_square_invoice(student, customer_id):
                     'base_price_money': {
                         'amount': int(student['price'] * 100),  # Price in cents
                         'currency': 'USD'
-                    }
+                    },
+                    'description': description  # Add description with teacher and lesson time
                 }
             ],
             'location_id': os.getenv('SQUARE_LOCATION_ID'),  # Use the location ID from .env
