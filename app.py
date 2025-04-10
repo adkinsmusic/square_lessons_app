@@ -1,5 +1,4 @@
-from flask import Flask, request, render_template_string
-import datetime
+from flask import Flask, request, render_template_string, redirect, url_for
 
 app = Flask(__name__)
 
@@ -33,14 +32,13 @@ def lesson_form():
             times.append(t.strftime("%I:%M %p"))
     times.append("09:00 PM")  # Add 9:00 PM manually
 
-    # Store students in a list
-    if 'students' not in request.cookies:
+    if 'students' not in request.form:
         students = []
     else:
-        students = eval(request.cookies.get('students'))
+        students = eval(request.form['students'])
 
     if request.method == 'POST':
-        # Collect the data from the first student form
+        # Collect the data from the current student form
         student_data = {
             'first_name': request.form['first_name'],
             'last_name': request.form['last_name'],
@@ -63,24 +61,25 @@ def lesson_form():
             'zip': request.form.get('zip', '')
         }
 
-        # Add new student to the session list
+        # Add student data to the students list
         students.append(student_data)
-        
-        # Store the updated students data in cookies
-        resp = make_response(render_template_string(form_html, instruments=instruments, pricing_options=pricing_options, service_types=service_types, days=days, times=times))
-        resp.set_cookie('students', str(students))
 
-        # Show "Add Another" button or submit final invoice button
-        if len(students) > 1:
-            resp.data += "<br><button onclick='location.href=\"/lesson-form\"'>Add Another Student</button>"
-        else:
-            resp.data += "<br><button onclick='location.href=\"/generate-invoice\"'>Generate Invoice</button>"
-
-        return resp
+        # Store students list back in form data for the next reload
+        return render_template_string(form_html,
+                                      students=students,
+                                      instruments=instruments,
+                                      pricing_options=pricing_options,
+                                      service_types=service_types,
+                                      days=days,
+                                      times=times)
 
     form_html = '''
         <h2>New Student Lesson Setup</h2>
         <form method="post">
+            {% for student in students %}
+                <h3>Student {{ loop.index }} Info</h3>
+            {% endfor %}
+            
             <strong>Student Info</strong><br>
             First Name: <input type="text" name="first_name" required><br><br>
             Last Name: <input type="text" name="last_name" required><br><br>
@@ -142,11 +141,15 @@ def lesson_form():
             State: <input type="text" name="state"><br><br>
             ZIP Code: <input type="text" name="zip"><br><br>
 
-            <input type="submit" value="Submit">
+            <input type="submit" value="Add Another Student">
+        </form>
+        <form method="post" action="/generate-invoice">
+            <input type="submit" value="Generate Invoice">
         </form>
     '''
 
     return render_template_string(form_html,
+                                  students=students,
                                   instruments=instruments,
                                   pricing_options=pricing_options,
                                   service_types=service_types,
