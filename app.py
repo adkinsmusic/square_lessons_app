@@ -167,20 +167,16 @@ def lesson_form():
 @app.route('/generate-invoice', methods=['POST'])
 def generate_invoice():
     """This is where you would handle invoice generation."""
-    # You can get student details from session
     students = session.get('students', [])
     if students:
         student = students[-1]  # Get the most recent student
-        # Here you can add logic to create an invoice based on student details
-        # For example, generate invoice in Square or store it in a database
-        print(f"Generating invoice for {student['first_name']} {student['last_name']}")
-        
-        # Optionally, create the invoice in Square or perform any other action here
+        # Create the invoice in Square
+        create_square_invoice(student)
 
-        # Redirect to a confirmation page or back to the form
-        return redirect(url_for('lesson_form'))  # Redirect back to the form page for now
+        # Redirect to a success page or display a confirmation
+        return render_template_string("<h2>Invoice Created Successfully for {{ student['first_name'] }} {{ student['last_name'] }}!</h2>", student=student)
 
-    return "No student data found.", 400  # If no student data is found in the session, show an error
+    return "No student data found.", 400
 
 
 def create_square_customer(first_name, last_name, email, phone):
@@ -192,11 +188,39 @@ def create_square_customer(first_name, last_name, email, phone):
             email_address=email,
             phone_number=phone
         )
-        # You can return the customer ID or handle it as needed
         print("Customer created successfully:", response)
         return response
     except Exception as e:
         print("Error creating customer:", e)
+        return None
+
+
+def create_square_invoice(student):
+    """Create an invoice in Square."""
+    try:
+        invoice_data = {
+            'order': {
+                'line_items': [
+                    {
+                        'name': f"{student['instrument']} Lesson",
+                        'quantity': '1',
+                        'base_price_money': {
+                            'amount': int(student['price'] * 100),  # Price in cents
+                            'currency': 'USD'
+                        }
+                    }
+                ],
+                'location_id': 'your-location-id',  # Replace with your Square location ID
+            },
+            'primary_recipient': {
+                'customer_id': 'your-customer-id'  # Replace with the customer ID created earlier
+            }
+        }
+        response = client.invoices.create_invoice(invoice_data)
+        print("Invoice created successfully:", response)
+        return response
+    except Exception as e:
+        print("Error creating invoice:", e)
         return None
 
 
