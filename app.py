@@ -166,4 +166,3 @@ def lesson_form():
                                   service_types=service_types,
                                   days=days,
                                   times=times)
-
