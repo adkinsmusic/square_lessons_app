@@ -1,6 +1,9 @@
-from flask import Flask, request
+from flask import Flask, request, render_template_string, redirect, url_for
 
 app = Flask(__name__)
+
+# You can change this to whatever you want
+AUTHORIZED_PASSWORD = "lessonaccess123"
 
 @app.route('/')
 def home():
@@ -8,6 +11,22 @@ def home():
 
 @app.route('/form', methods=['GET', 'POST'])
 def form():
+    if request.method == 'POST' and 'password' in request.form:
+        if request.form['password'] == AUTHORIZED_PASSWORD:
+            return redirect(url_for('lesson_form'))
+        else:
+            return "<h3>Access Denied: Incorrect Password</h3>"
+
+    return '''
+        <h2>Staff Login</h2>
+        <form method="post">
+            Password: <input type="password" name="password"><br><br>
+            <input type="submit" value="Enter">
+        </form>
+    '''
+
+@app.route('/lesson-form', methods=['GET', 'POST'])
+def lesson_form():
     if request.method == 'POST':
         data = {
             'student_name': request.form['student_name'],
