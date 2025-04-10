@@ -131,7 +131,7 @@ def lesson_form():
 
             <input type="submit" value="Add Student {{ students|length + 1 }}">
         </form>
-        <form method="post" action="/generate-invoice">
+        <form method="POST" action="/generate-invoice">
             <input type="submit" value="Generate Invoice">
         </form>
     '''
@@ -174,9 +174,13 @@ def generate_invoice():
         # Here you can add logic to create an invoice based on student details
         # For example, generate invoice in Square or store it in a database
         print(f"Generating invoice for {student['first_name']} {student['last_name']}")
+        
+        # Optionally, create the invoice in Square or perform any other action here
+
+        # Redirect to a confirmation page or back to the form
         return redirect(url_for('lesson_form'))  # Redirect back to the form page for now
 
-    return "No student data found.", 400
+    return "No student data found.", 400  # If no student data is found in the session, show an error
 
 
 def create_square_customer(first_name, last_name, email, phone):
