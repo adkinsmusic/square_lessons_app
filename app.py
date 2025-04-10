@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template_string, session, redirect, url_for
+from flask import Flask, request, render_template_string, session
 from datetime import time
 
 app = Flask(__name__)
@@ -166,3 +166,4 @@ def lesson_form():
                                   service_types=service_types,
                                   days=days,
                                   times=times)
+
