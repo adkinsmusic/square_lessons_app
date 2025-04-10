@@ -15,16 +15,9 @@ SQUARE_LOCATION_ID = os.getenv('SQUARE_LOCATION_ID')
 # Initialize the Square client with the access token
 client = Client(access_token=SQUARE_ACCESS_TOKEN)
 
+# Initialize the Flask app
 app = Flask(__name__)
-app.secret_key = FLASK_SECRET_KEY  # Secret key for session management
-
-# Mapping for pricing options (from dropdown text to actual dollar value)
-price_mapping = {
-    "Appointment Block": 0.0,  # $0 for appointment block
-    "Regular Price": 40.0,      # $40 for regular price
-    "Multi-Student/Military Discount": 35.0,  # $35 for multi-student/military discount
-    "4 or More Sessions Per Week": 32.50  # $32.50 for 4 or more sessions per week
-}
+app.secret_key = FLASK_SECRET_KEY  # Use secret key from .env
 
 @app.route('/lesson-form', methods=['GET', 'POST'])
 def lesson_form():
@@ -40,10 +33,14 @@ def lesson_form():
         "Eamon Jones", "Raymond Worden", "Joshua Miller", "Kait Widger"
     ]
     pricing_options = [
-        "Appointment Block ($0)", "Regular Price ($40)", "Multi-Student/Military Discount ($35)", "4 or More Sessions Per Week ($32.50)"
+        ("Appointment Block", "$0 - Tracks lessons for teacher"),
+        ("Regular Price", "$40 - Standard price for lessons"),
+        ("Multi-Student/Military Discount", "$35 - Discounted price"),
+        ("4 or More Sessions Per Week", "$32.50 - Discount for frequent lessons")
     ]
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"]
     times = [f"{i}:{j}" for i in range(10, 22) for j in ['00', '30']]  # Times from 10:00 AM to 9:30 PM
+    lessons_count = [str(i) for i in range(1, 17)]  # Dropdown for number of lessons
 
     # Handle form submission (for adding a student)
     if request.method == 'POST':
@@ -52,56 +49,67 @@ def lesson_form():
             'last_name': request.form['last_name'],
             'email': request.form['email'],
             'phone': request.form['phone'],
+            'parents_name': request.form.get('parents_name', ''),
             'instrument': request.form['instrument'],
             'teacher': request.form['teacher'],
             'lesson_day': request.form['lesson_day'],
             'lesson_time': request.form['lesson_time'],
-            'price_label': request.form['price'],  # Store the price label from the dropdown
-            'price': price_mapping.get(request.form['price'], 0.0),  # Map the selected price label to the numeric price
+            'price': request.form['price'],  # We store the price description
+            'num_lessons': request.form['num_lessons'],  # Number of lessons
+            'start_date': request.form['start_date']  # Start date for recurring invoice
         }
 
         # Add the student info to session
         if 'students' not in session:
             session['students'] = []
         session['students'].append(student_info)
+
+        # Redirect to lesson form (or a confirmation page could be added)
         return redirect(url_for('lesson_form'))
 
     # Generate the form for the user
     form_html = '''
         <form method="post">
-            First Name: <input type="text" name="first_name"><br><br>
-            Last Name: <input type="text" name="last_name"><br><br>
-            Email: <input type="email" name="email"><br><br>
-            Phone: <input type="text" name="phone"><br><br>
+            First Name: <input type="text" name="first_name"><br>
+            Last Name: <input type="text" name="last_name"><br>
+            Parent's Name (if student is under 18): <input type="text" name="parents_name"><br>
+            Email: <input type="email" name="email"><br>
+            Phone: <input type="text" name="phone"><br>
             Instrument: <select name="instrument">
                 {% for instrument in instruments %}
                     <option value="{{ instrument }}">{{ instrument }}</option>
                 {% endfor %}
-            </select><br><br>
+            </select><br>
             Teacher: <select name="teacher">
                 {% for teacher in teachers %}
                     <option value="{{ teacher }}">{{ teacher }}</option>
                 {% endfor %}
-            </select><br><br>
+            </select><br>
             Lesson Day: <select name="lesson_day">
                 {% for day in days %}
                     <option value="{{ day }}">{{ day }}</option>
                 {% endfor %}
-            </select><br><br>
+            </select><br>
             Lesson Time: <select name="lesson_time">
                 {% for time in times %}
                     <option value="{{ time }}">{{ time }}</option>
                 {% endfor %}
-            </select><br><br>
-            Price: <select name="price">
-                {% for option in pricing_options %}
-                    <option value="{{ option }}">{{ option }}</option>
+            </select><br>
+            Number of Lessons: <select name="num_lessons">
+                {% for count in lessons_count %}
+                    <option value="{{ count }}">{{ count }}</option>
                 {% endfor %}
-            </select><br><br>
+            </select><br>
+            Start Date for Recurring Invoice: <input type="date" name="start_date"><br>
+            Price: <select name="price">
+                {% for option, price in pricing_options %}
+                    <option value="{{ option }}">{{ option }} - {{ price }}</option>
+                {% endfor %}
+            </select><br>
             <button type="submit">Submit</button>
         </form>
     '''
-    return render_template_string(form_html, instruments=instruments, teachers=teachers, pricing_options=pricing_options, days=days, times=times)
+    return render_template_string(form_html, instruments=instruments, teachers=teachers, pricing_options=pricing_options, days=days, times=times, lessons_count=lessons_count)
 
 def create_square_customer(first_name, last_name, email, phone):
     """Create a customer in Square using the data from the form."""
@@ -159,7 +167,7 @@ def create_square_invoice(student, customer_id):
                     'description': description  # Add description with teacher and lesson time
                 }
             ],
-            'location_id': SQUARE_LOCATION_ID,  # Use the location ID from .env
+            'location_id': os.getenv('SQUARE_LOCATION_ID'),  # Use the location ID from .env
         },
         'primary_recipient': {
             'customer_id': customer_id  # Use the created customer ID
