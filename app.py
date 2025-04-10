@@ -46,11 +46,18 @@ def lesson_form():
             'last_name': request.form['last_name'],
             'email': request.form['email'],
             'phone': request.form['phone'],
+            'parent_name': request.form.get('parent_name', ''),
+            'parent_contact': request.form.get('parent_contact', ''),
+            'address': request.form['address'],
+            'city': request.form['city'],
+            'state': request.form['state'],
+            'zip': request.form['zip'],
             'instrument': request.form['instrument'],
             'teacher': request.form['teacher'],
             'lesson_day': request.form['lesson_day'],
             'lesson_time': request.form['lesson_time'],
             'price': float(request.form['price']),
+            'appointment_type': request.form['appointment_type']
         }
 
         # Add the student info to session
@@ -60,65 +67,53 @@ def lesson_form():
         return redirect(url_for('lesson_form'))
 
     # Generate the form for the user
-form_html = '''
-    <form method="post">
-        First Name: <input type="text" name="first_name"><br>
-        Last Name: <input type="text" name="last_name"><br>
-        Email: <input type="email" name="email"><br>
-        Phone: <input type="text" name="phone"><br>
-
-        <!-- Parent Info (optional) if under 18 -->
-        Parent's Name: <input type="text" name="parent_name" placeholder="Enter if under 18"><br>
-        Parent's Contact Info: <input type="text" name="parent_contact" placeholder="Enter if under 18"><br>
-
-        Address: <input type="text" name="address" placeholder="Street Address"><br>
-        City: <input type="text" name="city" placeholder="City"><br>
-        State: <input type="text" name="state" placeholder="State"><br>
-        ZIP: <input type="text" name="zip" placeholder="ZIP Code"><br>
-
-        Instrument: <select name="instrument">
-            {% for instrument in instruments %}
-                <option value="{{ instrument }}">{{ instrument }}</option>
-            {% endfor %}
-        </select><br>
-
-        Teacher: <select name="teacher">
-            {% for teacher in teachers %}
-                <option value="{{ teacher }}">{{ teacher }}</option>
-            {% endfor %}
-        </select><br>
-
-        Lesson Day: <select name="lesson_day">
-            {% for day in days %}
-                <option value="{{ day }}">{{ day }}</option>
-            {% endfor %}
-        </select><br>
-
-        Lesson Time: <select name="lesson_time">
-            {% for time in times %}
-                <option value="{{ time }}">{{ time }}</option>
-            {% endfor %}
-        </select><br>
-
-        Price: <select name="price">
-            {% for option in pricing_options %}
-                <option value="{{ option }}">{{ option }}</option>
-            {% endfor %}
-        </select><br>
-
-        <!-- Appointment Block (No charge, only tracking lessons) -->
-        Appointment Type: 
-        <select name="appointment_type">
-            <option value="Appointment Block">Appointment Block (No charge, tracks lessons)</option>
-            <option value="Regular Price">Regular Price</option>
-            <option value="Multi-Student/Military Discount">Multi-Student/Military Discount</option>
-            <option value="4 or More Sessions Per Week">4 or More Sessions Per Week</option>
-        </select><br>
-
-        <button type="submit">Submit</button>
-    </form>
-'''
-
+    form_html = '''
+        <form method="post">
+            First Name: <input type="text" name="first_name"><br>
+            Last Name: <input type="text" name="last_name"><br>
+            Email: <input type="email" name="email"><br>
+            Phone: <input type="text" name="phone"><br>
+            Parent's Name: <input type="text" name="parent_name" placeholder="Enter if under 18"><br>
+            Parent's Contact Info: <input type="text" name="parent_contact" placeholder="Enter if under 18"><br>
+            Address: <input type="text" name="address" placeholder="Street Address"><br>
+            City: <input type="text" name="city" placeholder="City"><br>
+            State: <input type="text" name="state" placeholder="State"><br>
+            ZIP: <input type="text" name="zip" placeholder="ZIP Code"><br>
+            Instrument: <select name="instrument">
+                {% for instrument in instruments %}
+                    <option value="{{ instrument }}">{{ instrument }}</option>
+                {% endfor %}
+            </select><br>
+            Teacher: <select name="teacher">
+                {% for teacher in teachers %}
+                    <option value="{{ teacher }}">{{ teacher }}</option>
+                {% endfor %}
+            </select><br>
+            Lesson Day: <select name="lesson_day">
+                {% for day in days %}
+                    <option value="{{ day }}">{{ day }}</option>
+                {% endfor %}
+            </select><br>
+            Lesson Time: <select name="lesson_time">
+                {% for time in times %}
+                    <option value="{{ time }}">{{ time }}</option>
+                {% endfor %}
+            </select><br>
+            Price: <select name="price">
+                {% for option in pricing_options %}
+                    <option value="{{ option }}">{{ option }}</option>
+                {% endfor %}
+            </select><br>
+            Appointment Type: 
+            <select name="appointment_type">
+                <option value="Appointment Block">Appointment Block (No charge, tracks lessons)</option>
+                <option value="Regular Price">Regular Price</option>
+                <option value="Multi-Student/Military Discount">Multi-Student/Military Discount</option>
+                <option value="4 or More Sessions Per Week">4 or More Sessions Per Week</option>
+            </select><br>
+            <button type="submit">Submit</button>
+        </form>
+    '''
     return render_template_string(form_html, instruments=instruments, teachers=teachers, pricing_options=pricing_options, days=days, times=times)
 
 def create_square_customer(first_name, last_name, email, phone):
