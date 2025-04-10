@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from square.client import Client
-from flask import Flask, request, render_template_string, session
+from flask import Flask, request, render_template_string, session, redirect, url_for
 from datetime import time
 
 # Load environment variables from the .env file
@@ -163,6 +163,22 @@ def lesson_form():
 
     return render_template_string(form_html, students=session['students'], instruments=instruments, pricing_options=pricing_options, days=days, times=times, teachers=teachers, service_types=service_types)
 
+
+@app.route('/generate-invoice', methods=['POST'])
+def generate_invoice():
+    """This is where you would handle invoice generation."""
+    # You can get student details from session
+    students = session.get('students', [])
+    if students:
+        student = students[-1]  # Get the most recent student
+        # Here you can add logic to create an invoice based on student details
+        # For example, generate invoice in Square or store it in a database
+        print(f"Generating invoice for {student['first_name']} {student['last_name']}")
+        return redirect(url_for('lesson_form'))  # Redirect back to the form page for now
+
+    return "No student data found.", 400
+
+
 def create_square_customer(first_name, last_name, email, phone):
     """Create a customer in Square using the data from the form."""
     try:
@@ -178,3 +194,7 @@ def create_square_customer(first_name, last_name, email, phone):
     except Exception as e:
         print("Error creating customer:", e)
         return None
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
