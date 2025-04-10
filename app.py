@@ -15,44 +15,28 @@ SQUARE_LOCATION_ID = os.getenv('SQUARE_LOCATION_ID')
 # Initialize the Square client with the access token
 client = Client(access_token=SQUARE_ACCESS_TOKEN)
 
-# Ensure the .env file is loaded first
-load_dotenv()
-
-# Retrieve the secret key from environment variables
-FLASK_SECRET_KEY = os.getenv('FLASK_SECRET_KEY')
-
-# Initialize the Flask app
 app = Flask(__name__)
-
-# Set the Flask secret key for session management
-app.secret_key = FLASK_SECRET_KEY  # Ensure it's being set here from the .env file
+app.secret_key = FLASK_SECRET_KEY  # Use the secret key from the .env file
 
 @app.route('/lesson-form', methods=['GET', 'POST'])
 def lesson_form():
     # Define options for the form
     instruments = [
-        "Piano", "Guitar", "Vocals", "Drums", "Banjo", "Bass Guitar", "Brass Horns/WoodWind", "Cello",
-        "Clarinet", "Flute", "Oboe", "Percussion Bells", "Saxophone", "Trombone", "Trumpet", "Ukulele", "Viola", "Violin"
+        "Piano", "Guitar", "Vocals", "Drums",
+        "Banjo", "Bass Guitar", "Brass Horns/WoodWind", "Cello",
+        "Clarinet", "Flute", "Oboe", "Percussion Bells",
+        "Saxophone", "Trombone", "Trumpet", "Ukulele", "Viola", "Violin"
     ]
     teachers = [
-        "Adam Wilson", "Bailey Kuehl", "Chase Jensen", "Jonny Clausing", "Eamon Jones", "Raymond Worden", 
-        "Joshua Miller", "Kait Widger"
+        "Adam Wilson", "Bailey Kuehl", "Chase Jensen", "Jonny Clausing",
+        "Eamon Jones", "Raymond Worden", "Joshua Miller", "Kait Widger"
     ]
     pricing_options = [
-        ("Appointment Block", 0), ("Regular Price", 40), ("Multi-Student/Military Discount", 35), 
-        ("4 or More Sessions Per Week", 32.50)
+        "Appointment Block", "Regular Price", "Multi-Student/Military Discount", "4 or More Sessions Per Week"
     ]
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"]
-    
-    # Create the time slots (12-hour format with AM/PM)
-    times = []
-    for hour in range(10, 22):  # Time from 10 AM to 9:30 PM
-        for minute in ['00', '30']:
-            time_obj = datetime.strptime(f"{hour}:{minute}", "%H:%M")
-            times.append(time_obj.strftime("%I:%M %p"))  # Convert to 12-hour format (AM/PM)
-
-    # Number of Lessons Dropdown (1 to 16)
-    lesson_options = [str(i) for i in range(1, 17)]  # Create a list of numbers from 1 to 16
+    times = [f"{i}:{j}" for i in range(10, 22) for j in ['00', '30']]  # Times from 10:00 AM to 9:30 PM
+    lesson_count_options = [str(i) for i in range(1, 17)]  # Add dropdown for number of lessons (1 to 16)
 
     # Handle form submission (for adding a student)
     if request.method == 'POST':
@@ -66,7 +50,8 @@ def lesson_form():
             'lesson_day': request.form['lesson_day'],
             'lesson_time': request.form['lesson_time'],
             'price': float(request.form['price']),
-            'num_lessons': request.form['num_lessons'],  # Get the number of lessons selected
+            'lesson_count': int(request.form['lesson_count']),
+            'start_date': request.form['start_date']  # Start date for the recurring invoice
         }
 
         # Add the student info to session
@@ -77,66 +62,65 @@ def lesson_form():
 
     # Generate the form for the user
     form_html = '''
-        <form method="post" style="font-family: Arial, sans-serif; margin: 20px;">
-            <div style="margin-bottom: 15px;">
-                First Name: <input type="text" name="first_name" style="width: 100%; padding: 10px;"><br>
-            </div>
-            <div style="margin-bottom: 15px;">
-                Last Name: <input type="text" name="last_name" style="width: 100%; padding: 10px;"><br>
-            </div>
-            <div style="margin-bottom: 15px;">
-                Email: <input type="email" name="email" style="width: 100%; padding: 10px;"><br>
-            </div>
-            <div style="margin-bottom: 15px;">
-                Phone: <input type="text" name="phone" style="width: 100%; padding: 10px;"><br>
-            </div>
-            <div style="margin-bottom: 15px;">
-                Instrument: <select name="instrument" style="width: 100%; padding: 10px;">
-                    {% for instrument in instruments %}
-                        <option value="{{ instrument }}">{{ instrument }}</option>
-                    {% endfor %}
-                </select><br>
-            </div>
-            <div style="margin-bottom: 15px;">
-                Teacher: <select name="teacher" style="width: 100%; padding: 10px;">
-                    {% for teacher in teachers %}
-                        <option value="{{ teacher }}">{{ teacher }}</option>
-                    {% endfor %}
-                </select><br>
-            </div>
-            <div style="margin-bottom: 15px;">
-                Lesson Day: <select name="lesson_day" style="width: 100%; padding: 10px;">
-                    {% for day in days %}
-                        <option value="{{ day }}">{{ day }}</option>
-                    {% endfor %}
-                </select><br>
-            </div>
-            <div style="margin-bottom: 15px;">
-                Lesson Time: <select name="lesson_time" style="width: 100%; padding: 10px;">
-                    {% for time in times %}
-                        <option value="{{ time }}">{{ time }}</option>
-                    {% endfor %}
-                </select><br>
-            </div>
-            <div style="margin-bottom: 15px;">
-                Number of Lessons: <select name="num_lessons" style="width: 100%; padding: 10px;">
-                    {% for num in lesson_options %}
-                        <option value="{{ num }}">{{ num }}</option>
-                    {% endfor %}
-                </select><br>
-            </div>
-            <div style="margin-bottom: 15px;">
-                Price: <select name="price" style="width: 100%; padding: 10px;">
-                    {% for option, price in pricing_options %}
-                        <option value="{{ price }}">{{ option }} - ${{ price }}</option>
-                    {% endfor %}
-                </select><br>
-            </div>
-            <button type="submit" style="padding: 10px 20px; font-size: 16px;">Submit</button>
+        <form method="post">
+            First Name: <input type="text" name="first_name"><br>
+            Last Name: <input type="text" name="last_name"><br>
+            Email: <input type="email" name="email"><br>
+            Phone: <input type="text" name="phone"><br>
+            Instrument: <select name="instrument">
+                {% for instrument in instruments %}
+                    <option value="{{ instrument }}">{{ instrument }}</option>
+                {% endfor %}
+            </select><br>
+            Teacher: <select name="teacher">
+                {% for teacher in teachers %}
+                    <option value="{{ teacher }}">{{ teacher }}</option>
+                {% endfor %}
+            </select><br>
+            Lesson Day: <select name="lesson_day">
+                {% for day in days %}
+                    <option value="{{ day }}">{{ day }}</option>
+                {% endfor %}
+            </select><br>
+            Lesson Time: <select name="lesson_time">
+                {% for time in times %}
+                    <option value="{{ time }}">{{ time }}</option>
+                {% endfor %}
+            </select><br>
+            Price: <select name="price">
+                {% for option in pricing_options %}
+                    <option value="{{ option }}">{{ option }}</option>
+                {% endfor %}
+            </select><br>
+            Number of Lessons: <select name="lesson_count">
+                {% for count in lesson_count_options %}
+                    <option value="{{ count }}">{{ count }}</option>
+                {% endfor %}
+            </select><br>
+            Start Date: <input type="date" name="start_date"><br>  <!-- Start date for recurring invoice -->
+            <button type="submit">Submit</button>
         </form>
     '''
+    return render_template_string(form_html, instruments=instruments, teachers=teachers, pricing_options=pricing_options, days=days, times=times, lesson_count_options=lesson_count_options)
 
-    return render_template_string(form_html, instruments=instruments, teachers=teachers, pricing_options=pricing_options, days=days, times=times, lesson_options=lesson_options)
+
+def create_square_customer(first_name, last_name, email, phone):
+    """Create a customer in Square using the data from the form."""
+    try:
+        response = client.customers.create_customer(
+            given_name=first_name,
+            family_name=last_name,
+            email_address=email,
+            phone_number=phone
+        )
+        # Get the Customer ID from the response
+        customer_id = response.result.customer.id
+        print(f"Customer created successfully with ID: {customer_id}")
+        return customer_id  # Return the Customer ID
+    except Exception as e:
+        print(f"Error creating customer: {e}")
+        return None
+
 
 @app.route('/generate-invoice', methods=['POST'])
 def generate_invoice():
@@ -147,7 +131,7 @@ def generate_invoice():
     if students:
         # Get the most recent student from the list (assuming last added)
         student = students[-1]
-        
+
         # Log student info
         print(f"Generating invoice for student: {student['first_name']} {student['last_name']}")
         
@@ -170,21 +154,6 @@ def generate_invoice():
     
     return "No student data found.", 400
 
-def create_square_customer(first_name, last_name, email, phone):
-    """Create a customer in Square using the data from the form."""
-    try:
-        response = client.customers.create_customer(
-            given_name=first_name,
-            family_name=last_name,
-            email_address=email,
-            phone_number=phone
-        )
-        customer_id = response.result.customer.id
-        print(f"Customer created successfully with ID: {customer_id}")
-        return customer_id  # Return the Customer ID
-    except Exception as e:
-        print(f"Error creating customer: {e}")
-        return None
 
 def create_square_invoice(student, customer_id):
     """Create an invoice in Square."""
@@ -207,7 +176,8 @@ def create_square_invoice(student, customer_id):
         },
         'primary_recipient': {
             'customer_id': customer_id
-        }
+        },
+        'scheduled_at': student['start_date']  # Start date for recurring invoices
     }
     
     try:
@@ -217,6 +187,7 @@ def create_square_invoice(student, customer_id):
     except Exception as e:
         print(f"Error creating invoice: {e}")
         return None
+
 
 if __name__ == '__main__':
     app.run(debug=True)
