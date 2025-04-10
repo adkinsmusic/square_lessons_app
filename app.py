@@ -43,7 +43,7 @@ def lesson_form():
         <h2>New Student Lesson Setup</h2>
         <form method="post">
             {% for student in students %}
-                <h3>Student {{ loop.index }} Info</h3>
+                <h3>Student {{ loop.index + 1 }} Info</h3>
             {% endfor %}
             
             <strong>Student Info</strong><br>
@@ -107,7 +107,7 @@ def lesson_form():
             State: <input type="text" name="state"><br><br>
             ZIP Code: <input type="text" name="zip"><br><br>
 
-            <input type="submit" value="Add Another Student">
+            <input type="submit" value="Add Student {{ students|length + 1 }}">
         </form>
         <form method="post" action="/generate-invoice">
             <input type="submit" value="Generate Invoice">
@@ -157,20 +157,3 @@ def lesson_form():
                                   service_types=service_types,
                                   days=days,
                                   times=times)
-
-
-@app.route('/generate-invoice', methods=['POST'])
-def generate_invoice():
-    if 'students' in session:
-        # Handle the invoice generation logic here
-        # Example: Process data and send to Square API (for now, we'll just print it)
-        invoice_data = session['students']
-        
-        # For debugging
-        print(invoice_data)
-
-        # After the invoice is processed, you can clear the session or redirect
-        session.pop('students', None)  # Clear session after invoice creation
-        return "Invoice generated successfully!"
-
-    return "No students to generate invoice for."
