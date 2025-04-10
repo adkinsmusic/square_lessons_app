@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from square.client import Client
 from flask import Flask, request, render_template_string, session, redirect, url_for
-from datetime import time
+from datetime import datetime
 
 # Load environment variables from .env file
 load_dotenv()
@@ -34,10 +34,19 @@ def lesson_form():
         "Eamon Jones", "Raymond Worden", "Joshua Miller", "Kait Widger"
     ]
     pricing_options = [
-        "Appointment Block", "Regular Price", "Multi-Student/Military Discount", "4 or More Sessions Per Week"
+        ("Appointment Block", 0), 
+        ("Regular Price", 40), 
+        ("Multi-Student/Military Discount", 35), 
+        ("4 or More Sessions Per Week", 32.50)
     ]
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"]
-    times = [f"{i}:{j}" for i in range(10, 22) for j in ['00', '30']]  # Times from 10:00 AM to 9:30 PM
+
+    # Generate times in 12-hour format
+    times = []
+    for hour in range(10, 22):
+        for minute in ['00', '30']:
+            time_obj = datetime.strptime(f"{hour}:{minute}", "%H:%M")
+            times.append(time_obj.strftime("%I:%M %p"))  # Convert to 12-hour format (AM/PM)
 
     # Handle form submission (for adding a student)
     if request.method == 'POST':
@@ -100,16 +109,13 @@ def lesson_form():
                 {% endfor %}
             </select><br>
             Price: <select name="price">
-                {% for option in pricing_options %}
-                    <option value="{{ option }}">{{ option }}</option>
+                {% for option, price in pricing_options %}
+                    <option value="{{ price }}">{{ option }} - ${{ price }}</option>
                 {% endfor %}
             </select><br>
             Appointment Type: 
             <select name="appointment_type">
                 <option value="Appointment Block">Appointment Block (No charge, tracks lessons)</option>
-                <option value="Regular Price">Regular Price</option>
-                <option value="Multi-Student/Military Discount">Multi-Student/Military Discount</option>
-                <option value="4 or More Sessions Per Week">4 or More Sessions Per Week</option>
             </select><br>
             <button type="submit">Submit</button>
         </form>
