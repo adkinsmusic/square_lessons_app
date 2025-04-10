@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template_string, session, redirect, url_for
+from flask import Flask, request, render_template_string, session
 from datetime import time
 
 app = Flask(__name__)
@@ -38,7 +38,7 @@ def lesson_form():
     if 'students' not in session:
         session['students'] = []
 
-    # HTML for the form
+    # HTML for the form (this should be defined above the POST request block)
     form_html = '''
         <h2>New Student Lesson Setup</h2>
         <form method="post">
@@ -159,6 +159,7 @@ def lesson_form():
                                   service_types=service_types,
                                   days=days,
                                   times=times)
+
 
 @app.route('/generate-invoice', methods=['POST'])
 def generate_invoice():
