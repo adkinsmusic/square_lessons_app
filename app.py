@@ -8,6 +8,7 @@ from datetime import datetime
 load_dotenv()
 
 # Retrieve the access token and location ID from environment variables
+FLASK_SECRET_KEY = os.getenv('FLASK_SECRET_KEY')
 SQUARE_ACCESS_TOKEN = os.getenv('SQUARE_ACCESS_TOKEN')
 SQUARE_LOCATION_ID = os.getenv('SQUARE_LOCATION_ID')
 
