@@ -15,8 +15,17 @@ SQUARE_LOCATION_ID = os.getenv('SQUARE_LOCATION_ID')
 # Initialize the Square client with the access token
 client = Client(access_token=SQUARE_ACCESS_TOKEN)
 
+# Ensure the .env file is loaded first
+load_dotenv()
+
+# Retrieve the secret key from environment variables
+FLASK_SECRET_KEY = os.getenv('FLASK_SECRET_KEY')
+
+# Initialize the Flask app
 app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY')  # Secret key from the .env file
+
+# Set the Flask secret key for session management
+app.secret_key = FLASK_SECRET_KEY  # Ensure it's being set here from the .env file
 
 @app.route('/lesson-form', methods=['GET', 'POST'])
 def lesson_form():
