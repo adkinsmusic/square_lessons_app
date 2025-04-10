@@ -1,8 +1,20 @@
+import os
+from dotenv import load_dotenv
+from square.client import Client
 from flask import Flask, request, render_template_string, session
 from datetime import time
 
+# Load environment variables from the .env file
+load_dotenv()
+
+# Retrieve the access token from the environment variable
+SQUARE_ACCESS_TOKEN = os.getenv('SQUARE_ACCESS_TOKEN')
+
+# Initialize the Square client with the access token
+client = Client(access_token=SQUARE_ACCESS_TOKEN)
+
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # Make sure to replace this with a real secret key for session security
+app.secret_key = 'your_real_secret_key_here'  # Replace with a real secret key for session security
 
 @app.route('/lesson-form', methods=['GET', 'POST'])
 def lesson_form():
@@ -138,61 +150,31 @@ def lesson_form():
             'start_date': request.form['start_date'],
             'price_option': request.form['price_option'],
             'price': pricing_options[request.form['price_option']],
-            'weeks': request.form['weeks'],
-            'appointment_service_type': request.form['appointment_service_type'],
-            'parent_name': request.form.get('parent_name', ''),
-            'parent_contact': request.form.get('parent_contact', ''),
-            'address_line1': request.form.get('address_line1', ''),
-            'city': request.form.get('city', ''),
-            'state': request.form.get('state', ''),
-            'zip': request.form.get('zip', '')
+            'weeks': request.form['weeks']
         }
 
-        # Add student data to the session list
+        # Add student to the session (this stores them for later use)
         session['students'].append(student_data)
 
-        # Render the form again with all added students
-        return render_template_string(form_html,
-                                      students=session['students'],
-                                      instruments=instruments,
-                                      pricing_options=pricing_options,
-                                      service_types=service_types,
-                                      days=days,
-                                      times=times,
-                                      teachers=teachers)
+        # Create the customer in Square (You could store customer data here or send it to Square)
+        create_square_customer(student_data['first_name'], student_data['last_name'], student_data['email'], student_data['phone'])
 
-    return render_template_string(form_html,
-                                  students=session['students'],
-                                  instruments=instruments,
-                                  pricing_options=pricing_options,
-                                  service_types=service_types,
-                                  days=days,
-                                  times=times,
-                                  teachers=teachers)
+        return render_template_string(form_html, students=session['students'], instruments=instruments, pricing_options=pricing_options, days=days, times=times, teachers=teachers, service_types=service_types)
 
+    return render_template_string(form_html, students=session['students'], instruments=instruments, pricing_options=pricing_options, days=days, times=times, teachers=teachers, service_types=service_types)
 
-@app.route('/generate-invoice', methods=['POST'])
-def generate_invoice():
-    if 'students' in session:
-        # Create the invoice line items for each student
-        invoice_items = []
-        for student in session['students']:
-            invoice_item = {
-                'student': f"{student['first_name']} {student['last_name']}",
-                'instrument': student['instrument'],
-                'price': student['price'],
-                'weeks': student['weeks'],
-                'teacher': student['teacher']
-            }
-            invoice_items.append(invoice_item)
-
-        # Print the invoice data (for now, just as an example)
-        print("Invoice generated with the following items:")
-        for item in invoice_items:
-            print(item)
-
-        # Clear session after invoice generation
-        session.pop('students', None)
-        return "Invoice generated successfully!"
-
-    return "No students to generate invoice for."
+def create_square_customer(first_name, last_name, email, phone):
+    """Create a customer in Square using the data from the form."""
+    try:
+        response = client.customers.create_customer(
+            given_name=first_name,
+            family_name=last_name,
+            email_address=email,
+            phone_number=phone
+        )
+        # You can return the customer ID or handle it as needed
+        print("Customer created successfully:", response)
+        return response
+    except Exception as e:
+        print("Error creating customer:", e)
+        return None
