@@ -38,52 +38,7 @@ def lesson_form():
     if 'students' not in session:
         session['students'] = []
 
-    # Handle POST request (form submission)
-    if request.method == 'POST':
-        student_data = {
-            'first_name': request.form['first_name'],
-            'last_name': request.form['last_name'],
-            'email': request.form['email'],
-            'phone': request.form['phone'],
-            'instrument': request.form['instrument'],
-            'lesson_day': request.form['lesson_day'],
-            'lesson_time': request.form['lesson_time'],
-            'teacher': request.form['teacher'],
-            'start_date': request.form['start_date'],
-            'price_option': request.form['price_option'],
-            'price': pricing_options[request.form['price_option']],
-            'weeks': request.form['weeks'],
-            'appointment_service_type': request.form['appointment_service_type'],
-            'parent_name': request.form.get('parent_name', ''),
-            'parent_contact': request.form.get('parent_contact', ''),
-            'address_line1': request.form.get('address_line1', ''),
-            'city': request.form.get('city', ''),
-            'state': request.form.get('state', ''),
-            'zip': request.form.get('zip', '')
-        }
-
-        # Add student data to the session list
-        session['students'].append(student_data)
-
-        # Check if the manager is done adding students or needs to add more
-        if len(session['students']) > 1:
-            return render_template_string(form_html,
-                                          students=session['students'],
-                                          instruments=instruments,
-                                          pricing_options=pricing_options,
-                                          service_types=service_types,
-                                          days=days,
-                                          times=times)
-        else:
-            return render_template_string(form_html,
-                                          students=session['students'],
-                                          instruments=instruments,
-                                          pricing_options=pricing_options,
-                                          service_types=service_types,
-                                          days=days,
-                                          times=times)
-
-    # HTML for the form
+    # HTML for the form (this should be defined above the POST request block)
     form_html = '''
         <h2>New Student Lesson Setup</h2>
         <form method="post">
@@ -158,6 +113,42 @@ def lesson_form():
             <input type="submit" value="Generate Invoice">
         </form>
     '''
+
+    # Handle POST request (form submission)
+    if request.method == 'POST':
+        student_data = {
+            'first_name': request.form['first_name'],
+            'last_name': request.form['last_name'],
+            'email': request.form['email'],
+            'phone': request.form['phone'],
+            'instrument': request.form['instrument'],
+            'lesson_day': request.form['lesson_day'],
+            'lesson_time': request.form['lesson_time'],
+            'teacher': request.form['teacher'],
+            'start_date': request.form['start_date'],
+            'price_option': request.form['price_option'],
+            'price': pricing_options[request.form['price_option']],
+            'weeks': request.form['weeks'],
+            'appointment_service_type': request.form['appointment_service_type'],
+            'parent_name': request.form.get('parent_name', ''),
+            'parent_contact': request.form.get('parent_contact', ''),
+            'address_line1': request.form.get('address_line1', ''),
+            'city': request.form.get('city', ''),
+            'state': request.form.get('state', ''),
+            'zip': request.form.get('zip', '')
+        }
+
+        # Add student data to the session list
+        session['students'].append(student_data)
+
+        # Render the form again with all added students
+        return render_template_string(form_html,
+                                      students=session['students'],
+                                      instruments=instruments,
+                                      pricing_options=pricing_options,
+                                      service_types=service_types,
+                                      days=days,
+                                      times=times)
 
     return render_template_string(form_html,
                                   students=session['students'],
