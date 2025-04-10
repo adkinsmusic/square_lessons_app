@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template_string, session, redirect, url_for
+from flask import Flask, request, render_template_string, session
 from datetime import time
 
 app = Flask(__name__)
@@ -42,9 +42,13 @@ def lesson_form():
     form_html = '''
         <h2>New Student Lesson Setup</h2>
         <form method="post">
-            {% for student in students %}
-                <h3>Student {{ loop.index + 1 }} Info</h3>
-            {% endfor %}
+            {% if students|length > 0 %}
+                {% for student in students %}
+                    <h3>Student {{ loop.index + 1 }} Info</h3>
+                {% endfor %}
+            {% else %}
+                <h3>Student 1 Info</h3>
+            {% endif %}
             
             <strong>Student Info</strong><br>
             First Name: <input type="text" name="first_name" required><br><br>
