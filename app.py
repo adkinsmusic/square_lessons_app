@@ -1,11 +1,12 @@
 from flask import Flask, request, render_template_string
+import datetime
 
 app = Flask(__name__)
 
 @app.route('/lesson-form', methods=['GET', 'POST'])
 def lesson_form():
     instruments = [
-        "Piano", "Guitar", "Vocals", "Drums",  # Top 4
+        "Piano", "Guitar", "Vocals", "Drums",
         "Banjo", "Bass Guitar", "Brass Horns/WoodWind", "Cello",
         "Clarinet", "Flute", "Oboe", "Percussion Bells",
         "Saxophone", "Trombone", "Trumpet", "Ukulele", "Viola", "Violin"
@@ -18,15 +19,19 @@ def lesson_form():
         "4 or More Sessions Per Week": 32.50
     }
 
+    service_types = {
+        "Appointment Block (no charge – for lesson tracking only)": "Appointment Block"
+    }
+
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday"]
 
+    # Generate 30-min time slots from 10:00 AM to 9:00 PM
     times = []
-    hour = 10
-    while hour < 21:
-        times.append(f"{hour}:00 AM" if hour < 12 else f"{hour-12}:00 PM" if hour > 12 else "12:00 PM")
-        times.append(f"{hour}:30 AM" if hour < 12 else f"{hour-12}:30 PM" if hour > 12 else "12:30 PM")
-        hour += 1
-    times.append("9:00 PM")
+    for hour in range(10, 21):  # 10am to 8pm
+        for minute in (0, 30):
+            t = datetime.time(hour, minute)
+            times.append(t.strftime("%I:%M %p"))
+    times.append("09:00 PM")  # Add 9:00 PM manually
 
     if request.method == 'POST':
         data = {
@@ -42,6 +47,7 @@ def lesson_form():
             'price_option': request.form['price_option'],
             'price': pricing_options[request.form['price_option']],
             'weeks': request.form['weeks'],
+            'appointment_service_type': request.form['appointment_service_type'],
             'parent_name': request.form.get('parent_name', ''),
             'parent_contact': request.form.get('parent_contact', ''),
             'address_line1': request.form.get('address_line1', ''),
@@ -61,21 +67,21 @@ def lesson_form():
             Phone Number: <input type="text" name="phone" required><br><br>
 
             Instrument:
-            <select name="instrument">
+            <select name="instrument" required>
                 {% for instrument in instruments %}
                 <option value="{{ instrument }}">{{ instrument }}</option>
                 {% endfor %}
             </select><br><br>
 
             Lesson Day:
-            <select name="lesson_day">
+            <select name="lesson_day" required>
                 {% for day in days %}
                 <option value="{{ day }}">{{ day }}</option>
                 {% endfor %}
             </select><br><br>
 
             Lesson Time:
-            <select name="lesson_time">
+            <select name="lesson_time" required>
                 {% for time in times %}
                 <option value="{{ time }}">{{ time }}</option>
                 {% endfor %}
@@ -85,16 +91,23 @@ def lesson_form():
             Start Date: <input type="date" name="start_date" required><br><br>
 
             Pricing Option:
-            <select name="price_option">
+            <select name="price_option" required>
                 {% for option, value in pricing_options.items() %}
                 <option value="{{ option }}">{{ option }} - ${{ '{:.2f}'.format(value) }}</option>
                 {% endfor %}
             </select><br><br>
 
             Number of Lessons:
-            <select name="weeks">
+            <select name="weeks" required>
                 {% for w in range(1, 9) %}
                 <option value="{{ w }}">{{ w }}</option>
+                {% endfor %}
+            </select><br><br>
+
+            <strong>Appointment Service Type</strong><br>
+            <select name="appointment_service_type" required>
+                {% for label, value in service_types.items() %}
+                <option value="{{ value }}">{{ label }}</option>
                 {% endfor %}
             </select><br><br>
 
@@ -111,8 +124,10 @@ def lesson_form():
             <input type="submit" value="Submit">
         </form>
     '''
+
     return render_template_string(form_html,
                                   instruments=instruments,
                                   pricing_options=pricing_options,
+                                  service_types=service_types,
                                   days=days,
                                   times=times)
