@@ -33,8 +33,15 @@ def lesson_form():
             times.append(t.strftime("%I:%M %p"))
     times.append("09:00 PM")  # Add 9:00 PM manually
 
+    # Store students in a list
+    if 'students' not in request.cookies:
+        students = []
+    else:
+        students = eval(request.cookies.get('students'))
+
     if request.method == 'POST':
-        data = {
+        # Collect the data from the first student form
+        student_data = {
             'first_name': request.form['first_name'],
             'last_name': request.form['last_name'],
             'email': request.form['email'],
@@ -55,7 +62,21 @@ def lesson_form():
             'state': request.form.get('state', ''),
             'zip': request.form.get('zip', '')
         }
-        return f"<h3>Form submitted successfully!</h3><pre>{data}</pre>"
+
+        # Add new student to the session list
+        students.append(student_data)
+        
+        # Store the updated students data in cookies
+        resp = make_response(render_template_string(form_html, instruments=instruments, pricing_options=pricing_options, service_types=service_types, days=days, times=times))
+        resp.set_cookie('students', str(students))
+
+        # Show "Add Another" button or submit final invoice button
+        if len(students) > 1:
+            resp.data += "<br><button onclick='location.href=\"/lesson-form\"'>Add Another Student</button>"
+        else:
+            resp.data += "<br><button onclick='location.href=\"/generate-invoice\"'>Generate Invoice</button>"
+
+        return resp
 
     form_html = '''
         <h2>New Student Lesson Setup</h2>
