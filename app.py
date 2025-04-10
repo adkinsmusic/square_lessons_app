@@ -38,15 +38,11 @@ def lesson_form():
     if 'students' not in session:
         session['students'] = []
 
-    # HTML for the form (this should be defined above the POST request block)
+    # HTML for the form
     form_html = '''
         <h2>New Student Lesson Setup</h2>
         <form method="post">
-            {% if students|length == 0 %}
-                <h3>Student 1 Info</h3>
-            {% else %}
-                <h3>Student {{ students|length + 1 }} Info</h3>
-            {% endif %}
+            <h3>Student Info</h3>
             
             <strong>Student Info</strong><br>
             First Name: <input type="text" name="first_name" required><br><br>
@@ -164,15 +160,25 @@ def lesson_form():
 @app.route('/generate-invoice', methods=['POST'])
 def generate_invoice():
     if 'students' in session:
-        # Handle the invoice generation logic here
-        # Example: Process data and send to Square API (for now, we'll just print it)
-        invoice_data = session['students']
-        
-        # For debugging
-        print(invoice_data)
+        # Create the invoice line items for each student
+        invoice_items = []
+        for student in session['students']:
+            invoice_item = {
+                'student': f"{student['first_name']} {student['last_name']}",
+                'instrument': student['instrument'],
+                'price': student['price'],
+                'weeks': student['weeks'],
+                'teacher': student['teacher']
+            }
+            invoice_items.append(invoice_item)
 
-        # After the invoice is processed, you can clear the session or redirect
-        session.pop('students', None)  # Clear session after invoice creation
+        # Print the invoice data (for now, just as an example)
+        print("Invoice generated with the following items:")
+        for item in invoice_items:
+            print(item)
+
+        # Clear session after invoice generation
+        session.pop('students', None)
         return "Invoice generated successfully!"
 
     return "No students to generate invoice for."
