@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template_string, session
+from flask import Flask, request, render_template_string, session, redirect, url_for
 from datetime import time
 
 app = Flask(__name__)
@@ -157,3 +157,20 @@ def lesson_form():
                                   service_types=service_types,
                                   days=days,
                                   times=times)
+
+
+@app.route('/generate-invoice', methods=['POST'])
+def generate_invoice():
+    if 'students' in session:
+        # Handle the invoice generation logic here
+        # Example: Process data and send to Square API (for now, we'll just print it)
+        invoice_data = session['students']
+        
+        # For debugging
+        print(invoice_data)
+
+        # After the invoice is processed, you can clear the session or redirect
+        session.pop('students', None)  # Clear session after invoice creation
+        return "Invoice generated successfully!"
+
+    return "No students to generate invoice for."
