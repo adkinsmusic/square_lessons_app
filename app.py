@@ -13,6 +13,12 @@ def lesson_form():
         "Saxophone", "Trombone", "Trumpet", "Ukulele", "Viola", "Violin"
     ]
 
+    teachers = [
+        "Adam Wilson", "Bailey Kuehl", "Chase Jensen", "Eamon Jones", 
+        "Jonny Clausing", "Joshua Miller", "Kait Widger", "Raymond Worden", 
+        "Reyli Gonzalez", "Sam Howdle"
+    ]
+
     pricing_options = {
         "Appointment Block": 0.00,
         "Regular Price": 40.00,
@@ -71,7 +77,13 @@ def lesson_form():
                 {% endfor %}
             </select><br><br>
 
-            Teacher: <input type="text" name="teacher" required><br><br>
+            Teacher:
+            <select name="teacher" required>
+                {% for teacher in teachers %}
+                <option value="{{ teacher }}">{{ teacher }}</option>
+                {% endfor %}
+            </select><br><br>
+
             Start Date: <input type="date" name="start_date" required><br><br>
 
             Pricing Option:
@@ -146,7 +158,8 @@ def lesson_form():
                                       pricing_options=pricing_options,
                                       service_types=service_types,
                                       days=days,
-                                      times=times)
+                                      times=times,
+                                      teachers=teachers)
 
     return render_template_string(form_html,
                                   students=session['students'],
@@ -154,7 +167,8 @@ def lesson_form():
                                   pricing_options=pricing_options,
                                   service_types=service_types,
                                   days=days,
-                                  times=times)
+                                  times=times,
+                                  teachers=teachers)
 
 
 @app.route('/generate-invoice', methods=['POST'])
